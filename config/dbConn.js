@@ -6,9 +6,9 @@ const config = {
   server: process.env.DB_SERVER,
   database: process.env.DB_NAME,
   options: {
-    // trustedconnection: process.env.DB_OPTIONS_TRUSTED_CONNECTION === 'true',
-    // enableArithAbort: process.env.DB_OPTIONS_ENABLE_ARITH_ABORT === 'true',
-    // instancename: process.env.DB_OPTIONS_INSTANCE_NAME,
+     trustedconnection: process.env.DB_OPTIONS_TRUSTED_CONNECTION === 'true',
+     enableArithAbort: process.env.DB_OPTIONS_ENABLE_ARITH_ABORT === 'true',
+     instancename: process.env.DB_OPTIONS_INSTANCE_NAME,
     trustServerCertificate: false,
     encrypt:false,
 

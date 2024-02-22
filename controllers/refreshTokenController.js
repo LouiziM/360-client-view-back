@@ -50,17 +50,18 @@ const handleRefreshToken = async (req, res) => {
           await pool.request()
             .input('username', sql.NVarChar(255), decoded.username)
             .input('refreshToken', sql.NVarChar(255), refreshToken)
-            .query('UPDATE Users SET refreshToken = ARRAY_REMOVE(refreshToken, @refreshToken) WHERE username = @username');
+            .query('UPDATE Users SET refreshToken = NULL WHERE username = @username');
         }
         if (err || foundUser.username !== decoded.username) return res.sendStatus(403);
 
         // Refresh token was still valid
-        const roles = Object.values(foundUser.roles);
+        const role = foundUser?.roles || 0; // Assuming roles is an integer
+
         const accessToken = jwt.sign(
           {
             UserInfo: {
               username: decoded.username,
-              roles: roles
+              roles: role // Keep as is (no conversion to array)
             }
           },
           process.env.ACCESS_TOKEN_SECRET,
@@ -89,7 +90,6 @@ const handleRefreshToken = async (req, res) => {
     console.error(err);
     res.status(500).send('Internal Server Error');
   } finally {
-
     sql.close();
   }
 };

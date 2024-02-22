@@ -1,5 +1,6 @@
 const sql = require('mssql');
 const dbConfig = require('../config/dbConn'); // Ensure this points to your actual DB config
+const ROLES_LIST = require('../config/roles_list');
 
 // Fetch all users from the Users table
 const getAllUsers = async (req, res) => {
@@ -18,7 +19,7 @@ const getAllUsers = async (req, res) => {
     console.error(err);
     res.status(500).json({ message: err.message });
   } finally {
-    await pool.close();
+    sql.close();
   }
 };
 
@@ -33,7 +34,7 @@ const deleteUser = async (req, res) => {
 
     const result = await pool.request()
       .input('userId', sql.Int, userId)
-      .query('DELETE FROM Users WHERE Id = @userId');
+      .query('DELETE FROM Users WHERE UserId = @userId');
 
     if (result.rowsAffected[0] === 0) {
       return res.status(204).json({ message: `User ID ${userId} not found` });
@@ -50,16 +51,18 @@ const deleteUser = async (req, res) => {
 
 // Fetch a single user from the Users table
 const getUser = async (req, res) => {
-  const userId = req?.params?.id;
+  const userId = req?.body?.id; 
+
+  console.log(`User ID ${userId} `)
   if (!userId) return res.status(400).json({ message: 'User ID required' });
 
   try {
     const pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
-
+   
     const result = await pool.request()
       .input('userId', sql.Int, userId)
-      .query('SELECT * FROM Users WHERE Id = @userId');
+      .query('SELECT * FROM Users WHERE UserId = @userId');
 
     if (!result.recordset || result.recordset.length === 0) {
       return res.status(204).json({ message: `User ID ${userId} not found` });

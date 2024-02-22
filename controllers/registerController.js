@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const dbConfig = require('../config/dbConn'); 
 
 const handleNewUser = async (req, res) => {
-  const { user, pwd } = req.body;
+  const { user, pwd , roles } = req.body;
   if (!user || !pwd) return res.status(400).json({ message: 'Username and password are required.' });
 
   try {
@@ -27,7 +27,8 @@ const handleNewUser = async (req, res) => {
     const resultCreateUser = await pool.request()
       .input('username', sql.VarChar, user)
       .input('password', sql.VarChar, hashedPwd)
-      .query('INSERT INTO Users (username, password) VALUES (@username, @password)');
+      .input('roles',sql.Int,roles)
+      .query('INSERT INTO Users (username, password,roles) VALUES (@username, @password,@roles)');
 
     console.log(resultCreateUser);
 

@@ -6,11 +6,11 @@ const dbConfig = require('../config/dbConn');
 const handleLogin = async (req, res) => {
   const cookies = req.cookies;
   const { user, pwd } = req.body;
-  
+
   if (!user || !pwd) {
     return res.status(400).json({ 'message': 'Username and password are required.' });
   }
-  
+
   try {
     const pool = await sql.connect(dbConfig);
 
@@ -18,17 +18,17 @@ const handleLogin = async (req, res) => {
     const result = await pool.request()
       .input('username', sql.NVarChar(255), user)
       .query('SELECT * FROM [360_DB].[dbo].[Users] WHERE [username] = @username');
-    
+
     const foundUser = result.recordset[0];
     if (!foundUser) return res.sendStatus(401); // Unauthorized
 
     // Evaluate password
     const match = await bcrypt.compare(pwd, foundUser.password);
     if (match) {
-      const roles = foundUser?.roles ? Object.values(foundUser.roles).filter(Boolean) : [];
+      const role = foundUser?.roles || 0; // Assuming roles is an integer
 
       const accessToken = jwt.sign(
-        { "UserInfo": { "username": foundUser.username, "roles": roles } },
+        { "UserInfo": { "username": foundUser.username, "roles": role } }, // Keep as is (no conversion to array)
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: '500s' }
       );
@@ -40,14 +40,13 @@ const handleLogin = async (req, res) => {
       );
       let refreshTokenArray = [];
 
-if (foundUser.refreshToken) {
-  if (Array.isArray(foundUser.refreshToken)) {
-    refreshTokenArray = foundUser.refreshToken.filter(rt => rt !== cookies?.jwt);
-  } else {
-    // Handle non-array refreshToken (convert to array or handle differently)
-    refreshTokenArray.push(foundUser.refreshToken !== cookies?.jwt ? foundUser.refreshToken : null);
-  }
-}
+      if (foundUser.refreshToken) {
+        if (Array.isArray(foundUser.refreshToken)) {
+          refreshTokenArray = foundUser.refreshToken.filter(rt => rt !== cookies?.jwt);
+        } else {
+          refreshTokenArray.push(foundUser.refreshToken !== cookies?.jwt ? foundUser.refreshToken : null);
+        }
+      }
 
       if (cookies?.jwt) {
         const refreshToken = cookies.jwt;
@@ -81,7 +80,6 @@ if (foundUser.refreshToken) {
     console.error(err);
     res.status(500).send('Internal Server Error');
   } finally {
-    
     sql.close();
   }
 };
