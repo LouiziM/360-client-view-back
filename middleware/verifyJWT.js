@@ -9,12 +9,10 @@ const verifyJWT = (req, res, next) => {
     console.log(token);
 
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-        console.log("this is decoded", decoded);
         if (err) return res.sendStatus(403); // Invalid token
 
         req.user = decoded.UserInfo.username;
         req.role = decoded.UserInfo.roles;
-        console.log("haha", req.role);
 
         // Check if the user has the required role (Admin)
         if (req.role === ROLES_LIST.Admin) {

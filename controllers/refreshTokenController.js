@@ -4,6 +4,7 @@ const connectDB = require('../config/dbConn');
 
 const handleRefreshToken = async (req, res) => {
   const cookies = req.cookies;
+  console.log("reaches here")
   if (!cookies?.jwt) return res.sendStatus(401);
 
   const refreshToken = cookies.jwt;
@@ -38,7 +39,11 @@ const handleRefreshToken = async (req, res) => {
 
     // Get user details from the database
     const foundUser = result.recordset[0];
-    const newRefreshTokenArray = foundUser.refreshToken.filter(rt => rt !== refreshToken);
+    console.log(foundUser)
+    // Check if refreshToken is an array
+    const newRefreshTokenArray = Array.isArray(foundUser.refreshToken)
+      ? foundUser.refreshToken.filter(rt => rt !== refreshToken)
+      : [];
 
     // Evaluate jwt
     jwt.verify(
@@ -78,7 +83,7 @@ const handleRefreshToken = async (req, res) => {
         await pool.request()
           .input('username', sql.NVarChar(255), decoded.username)
           .input('newRefreshToken', sql.NVarChar(255), newRefreshToken)
-          .query('UPDATE Users SET refreshToken = ARRAY_APPEND(refreshToken, @newRefreshToken) WHERE username = @username');
+          .query('UPDATE Users SET refreshToken = @newRefreshToken WHERE username = @username');
 
         // Creates Secure Cookie with refresh token
         res.cookie('jwt', newRefreshToken, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 24 * 60 * 60 * 1000 });
