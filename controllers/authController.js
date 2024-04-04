@@ -14,10 +14,9 @@ const handleLogin = async (req, res) => {
   try {
     const pool = await sql.connect(dbConfig);
 
-    // Query for user by username
     const result = await pool.request()
       .input('username', sql.NVarChar(255), user)
-      .query('SELECT * FROM [360_DB].[dbo].[Users] WHERE [username] = @username');
+      .query('SELECT * FROM [CDM].[dbo].[Users] WHERE [username] = @username AND [active] = 1');
 
     const foundUser = result.recordset[0];
     if (!foundUser) return res.sendStatus(401); // Unauthorized
@@ -25,16 +24,16 @@ const handleLogin = async (req, res) => {
     // Evaluate password
     const match = await bcrypt.compare(pwd, foundUser.password);
     if (match) {
-      const role = foundUser?.roles || 0; // Assuming roles is an integer
+      const role = foundUser?.roles || 0; 
 
       const accessToken = jwt.sign(
-        { "UserInfo": { "username": foundUser.username, "roles": role } }, // Keep as is (no conversion to array)
+        { "UserInfo": { "UserId": foundUser.UserId, "roles": role } }, 
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: '500s' }
       );
 
       const newRefreshToken = jwt.sign(
-        { "username": foundUser.username },
+        { "UserId": foundUser.UserId },
         process.env.REFRESH_TOKEN_SECRET,
         { expiresIn: '604800s' }
       );
@@ -65,7 +64,8 @@ const handleLogin = async (req, res) => {
       await pool.request()
         .input('newRefreshToken', sql.NVarChar(255), newRefreshToken)
         .input('username', sql.NVarChar(255), user)
-        .query('UPDATE Users SET refreshToken = @newRefreshToken WHERE username = @username');
+        .input('lastLogin', sql.DateTime2, new Date()) 
+        .query('UPDATE Users SET refreshToken = @newRefreshToken, lastLogin = @lastLogin WHERE username = @username');
 
       // Create Secure Cookie with refresh token
       res.cookie('jwt', newRefreshToken, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 24 * 60 * 60 * 1000 });
@@ -83,5 +83,6 @@ const handleLogin = async (req, res) => {
     sql.close();
   }
 };
+
 
 module.exports = { handleLogin };

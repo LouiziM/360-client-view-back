@@ -1,9 +1,9 @@
 const sql = require('mssql');
-const dbConfig = require('../config/dbConn'); // Ensure this points to your actual DB config
+const dbConfig = require('../config/dbConn'); 
 const ROLES_LIST = require('../config/roles_list');
 const bcrypt = require('bcrypt');
 const {handleNewUser} = require('./registerController')
-// Fetch all users from the Users table
+
 const getAllUsers = async (req, res) => {
   try {
     const pool = new sql.ConnectionPool(dbConfig);
@@ -15,7 +15,13 @@ const getAllUsers = async (req, res) => {
       return res.status(204).json({ message: 'No users found' });
     }
 
-    res.json(result.recordset);
+   
+    const users = result.recordset.map(user => ({
+      ...user,
+      password: '' 
+    }));
+
+    res.json(users);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: err.message });
@@ -35,9 +41,9 @@ const deleteUser = async (req, res) => {
 
     const result = await pool.request()
       .input('userId', sql.Int, userId)
-      .query('DELETE FROM Users WHERE UserId = @userId');
+      .query('UPDATE Users SET logOut = 1 WHERE UserId = @userId; DELETE FROM Users WHERE UserId = @userId');
 
-    if (result.rowsAffected[0] === 0) {
+    if (result.rowsAffected[1] === 0) {
       return res.status(204).json({ message: `User ID ${userId} not found` });
     }
 
@@ -49,6 +55,7 @@ const deleteUser = async (req, res) => {
     sql.close();
   }
 };
+
 
 // Fetch a single user from the Users table
 const getUser = async (req, res) => {
@@ -78,6 +85,7 @@ const getUser = async (req, res) => {
   }
 };
 
+//update the user
 const updateUser = async (req, res) => {
   const { id, username, pwd } = req.body;
 
@@ -99,16 +107,15 @@ const updateUser = async (req, res) => {
         .input('userId', sql.Int, id)
         .input('newUsername', sql.VarChar(255), username)
         .input('newPassword', sql.VarChar(255), newHashedPwd)
-        .query('UPDATE Users SET username = @newUsername, password = @newPassword WHERE UserId = @userId');
+        .query('UPDATE Users SET username = @newUsername, password = @newPassword, logOut = 1 WHERE UserId = @userId');
     } else {
       result = await pool.request()
         .input('userId', sql.Int, id)
         .input('newUsername', sql.VarChar(255), username)
-        .query('UPDATE Users SET username = @newUsername WHERE UserId = @userId');
+        .query('UPDATE Users SET username = @newUsername, logOut = 1 WHERE UserId = @userId');
     }
 
     if (result.rowsAffected[0] === 0) {
-      // User not found, create a new user
       await handleNewUser(req, res);
       isNewUser = true;
     }
@@ -127,11 +134,51 @@ const updateUser = async (req, res) => {
 
 
 
+const deactivateUser = async (req, res) => {
+  const { isActive, id } = req.body;
+
+  if (!id || isActive === undefined) {
+    return res.status(400).json({ message: 'User ID and isActive are required' });
+  }
+
+  try {
+    const pool = new sql.ConnectionPool(dbConfig);
+    await pool.connect();
+
+    let logOutValue = 0; // Default value for logOut column
+
+    if (!isActive) {
+      logOutValue = 1; // Set logOut to 1 if isActive is false
+    }
+
+    const result = await pool.request()
+      .input('userId', sql.Int, id)
+      .input('isActive', sql.Bit, isActive)
+      .input('logOut', sql.Bit, logOutValue)
+      .query('UPDATE Users SET active = @isActive, logOut = @logOut WHERE UserId = @userId');
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(204).json({ message: `User ID ${id} not found` });
+    }
+
+    res.json({ message: `User ID ${id} deactivated successfully` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  } finally {
+    sql.close();
+  }
+};
+
+
+
+
 
 module.exports = {
   getAllUsers,
   deleteUser,
   getUser,
   updateUser,
+  deactivateUser
 };
 

@@ -1,4 +1,4 @@
-//pushed
+//2
 require('dotenv').config();
 const express = require('express');
 const app = express();
@@ -45,6 +45,8 @@ app.use('/auth', require('./routes/auth'));
 app.use('/refresh', require('./routes/refresh'));
 app.use('/logout', require('./routes/logout'));
 app.use('/users', require('./routes/api/users'));
+app.use('/clients', require('./routes/clients'));
+
 app.use(verifyJWT);
 
 

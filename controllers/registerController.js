@@ -3,17 +3,19 @@ const bcrypt = require('bcrypt');
 const dbConfig = require('../config/dbConn'); 
 
 const handleNewUser = async (req, res) => {
-  const { user, pwd , roles } = req.body;
-  if (!user || !pwd) return res.status(400).json({ message: 'Username and password are required.' });
+  const { user, username, pwd, roles } = req.body;
+  const actualUser = user || username;
 
-  try {
+  if (!actualUser || !pwd) return res.status(400).json({ message: 'Username and password are required.' });
+
+  try { 
     // Connect to SQL Server
     const pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
     // Check for duplicate usernames in the database
     const resultDuplicate = await pool.request()
-      .input('username', sql.VarChar, user)
+      .input('username', sql.VarChar, actualUser)
       .query('SELECT * FROM Users WHERE username = @username');
 
     if (resultDuplicate.recordset && resultDuplicate.recordset.length > 0) {
@@ -25,14 +27,15 @@ const handleNewUser = async (req, res) => {
 
     // Create and store the new user in the database
     const resultCreateUser = await pool.request()
-      .input('username', sql.VarChar, user)
+      .input('username', sql.VarChar, actualUser)
       .input('password', sql.VarChar, hashedPwd)
       .input('roles',sql.Int,roles)
-      .query('INSERT INTO Users (username, password,roles) VALUES (@username, @password,@roles)');
+      .input('creationDate', sql.DateTime2, new Date()) 
+      .query('INSERT INTO Users (username, password,roles, creationDate) VALUES (@username, @password,@roles, @creationDate)');
 
-    console.log(resultCreateUser);
+    console.log("result",resultCreateUser);
 
-    res.status(201).json({ success: `New user ${user} created!` });
+    res.status(201).json({ success: `New user ${actualUser} created!` });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: err.message });
