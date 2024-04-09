@@ -42,8 +42,21 @@ const getCompletion = async (req, res) => {
   }
 };
 
+const getCountByRegion = async (req, res) => {
+  try {
+    const response = await axios.get(`http://127.0.0.1:5000/customers/customer-count-by-region`);
+    res.json(response.data);
+  } catch (error) {
+    if (error.response) {
+      res.status(error.response.status).json({ message: error.response.data });
+    } else if (error.request) {
+      res.status(500).json({ message: 'No response received from the server' });
+    } else {
+      res.status(500).json({ message: error.message });
+    }
+  }};
 
 module.exports = {
-  getClients,getCompletion,
+  getClients,getCompletion,getCountByRegion
 
 };
