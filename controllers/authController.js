@@ -16,7 +16,7 @@ const handleLogin = async (req, res) => {
 
     const result = await pool.request()
       .input('username', sql.NVarChar(255), user)
-      .query('SELECT * FROM [CDM].[dbo].[Users] WHERE [username] = @username AND [active] = 1');
+      .query('SELECT * FROM [dbo].[Users] WHERE [username] = @username AND [active] = 1');
 
     const foundUser = result.recordset[0];
     if (!foundUser) return res.sendStatus(401); // Unauthorized

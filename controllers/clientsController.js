@@ -7,7 +7,7 @@ const getClients = async (req, res) => {
     const pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
-    const result = await pool.request().query('SELECT * FROM customer');
+    const result = await pool.request().query('SELECT * FROM A_CUSTOMER');
 
     if (!result.recordset || result.recordset.length === 0) {
       return res.status(204).json({ message: 'No clients found' });
