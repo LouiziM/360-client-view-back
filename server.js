@@ -12,7 +12,7 @@ const cookieParser = require('cookie-parser');
 const credentials = require('./middleware/credentials');
 
 const connectDB = require('./config/dbConn');
-const PORT = process.env.PORT || 3500;
+const PORT = process.env.PORT || 4004;
 const usersController = require('./controllers/usersController');
 
 
