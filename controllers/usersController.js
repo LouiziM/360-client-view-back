@@ -41,7 +41,7 @@ const deleteUser = async (req, res) => {
 
     const result = await pool.request()
       .input('userId', sql.Int, userId)
-      .query('UPDATE Users SET logOut = 1 WHERE UserId = @userId; DELETE FROM Users WHERE UserId = @userId');
+      .query('UPDATE Users SET active = 0 WHERE UserId = @userId; DELETE FROM Users WHERE UserId = @userId');
 
     if (result.rowsAffected[1] === 0) {
       return res.status(204).json({ message: `User ID ${userId} not found` });
@@ -107,12 +107,12 @@ const updateUser = async (req, res) => {
         .input('userId', sql.Int, id)
         .input('newUsername', sql.VarChar(255), username)
         .input('newPassword', sql.VarChar(255), newHashedPwd)
-        .query('UPDATE Users SET username = @newUsername, password = @newPassword, logOut = 1 WHERE UserId = @userId');
+        .query('UPDATE Users SET username = @newUsername, password = @newPassword  WHERE UserId = @userId');
     } else {
       result = await pool.request()
         .input('userId', sql.Int, id)
         .input('newUsername', sql.VarChar(255), username)
-        .query('UPDATE Users SET username = @newUsername, logOut = 1 WHERE UserId = @userId');
+        .query('UPDATE Users SET username = @newUsername, active = 1 WHERE UserId = @userId');
     }
 
     if (result.rowsAffected[0] === 0) {
@@ -144,18 +144,11 @@ const deactivateUser = async (req, res) => {
   try {
     const pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
-
-    let logOutValue = 0; // Default value for logOut column
-
-    if (!isActive) {
-      logOutValue = 1; // Set logOut to 1 if isActive is false
-    }
-
+    console.log(isActive)
     const result = await pool.request()
       .input('userId', sql.Int, id)
       .input('isActive', sql.Bit, isActive)
-      .input('logOut', sql.Bit, logOutValue)
-      .query('UPDATE Users SET active = @isActive, logOut = @logOut WHERE UserId = @userId');
+      .query('UPDATE Users SET active = @isActive WHERE UserId = @userId');
 
     if (result.rowsAffected[0] === 0) {
       return res.status(204).json({ message: `User ID ${id} not found` });

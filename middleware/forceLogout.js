@@ -20,11 +20,8 @@ const forceLogout = async (req, res, next) => {
                 .input('userId', sql.Int, userId)
                 .query('SELECT * FROM Users WHERE UserId = @userId');
 
-            if (result.recordset.length === 0 || result.recordset[0].logOut == 1) {
-                // Set logOut to 0 in the database
-                await pool.request()
-                    .input('userId', sql.Int, userId)
-                    .query('UPDATE Users SET logOut = 0 WHERE UserId = @userId');
+            if (result.recordset.length === 0 || result.recordset[0].active == 0) {
+
                 
                 return res.status(401).json({ logged: 0 }); // User should be logged out
             }
