@@ -3,11 +3,11 @@ const sql = require('mssql');
 const dbConfig = require('../config/dbConn');
 
 const forceLogout = async (req, res, next) => {
-    const authHeader = req.headers.authorization || req.headers.Authorization;
-    if (!authHeader?.startsWith('Bearer ')) return res.sendStatus(401);
 
-    const token = authHeader.split(' ')[1];
-    console.log(token);
+    const token = req.cookies.jwt;
+    if (!token) {
+        return res.status(401).json({ type: 'UNAUTHORIZED', error: `Ton compte est désactivé` });
+    }
 
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, async (err, decoded) => {
         if (err) return res.sendStatus(403); // Invalid token

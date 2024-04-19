@@ -12,7 +12,7 @@ const getAllUsers = async (req, res) => {
     const result = await pool.request().query('SELECT * FROM Users');
 
     if (!result.recordset || result.recordset.length === 0) {
-      return res.status(204).json({ message: 'No users found' });
+      return res.status(400).json({ message: 'No users found' });
     }
 
    
@@ -24,7 +24,7 @@ const getAllUsers = async (req, res) => {
     res.json(users);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal Server Error' });
   } finally {
     sql.close();
   }
@@ -44,13 +44,13 @@ const deleteUser = async (req, res) => {
       .query('UPDATE Users SET active = 0 WHERE UserId = @userId; DELETE FROM Users WHERE UserId = @userId');
 
     if (result.rowsAffected[1] === 0) {
-      return res.status(204).json({ message: `User ID ${userId} not found` });
+      return res.status(400).json({ message: `User ID ${userId} not found` });
     }
 
-    res.json({ message: `User ID ${userId} deleted successfully` });
+    res.status(200).json({ message: `User ID ${userId} deleted successfully` });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal Server Error' });
   } finally {
     sql.close();
   }
@@ -61,8 +61,7 @@ const deleteUser = async (req, res) => {
 const getUser = async (req, res) => {
   const userId = req?.body?.id; 
 
-  console.log(`User ID ${userId} `)
-  if (!userId) return res.status(400).json({ message: 'User ID required' });
+  if (!userId) return res.status(400).json({ message: 'User ID est obligatoire' });
 
   try {
     const pool = new sql.ConnectionPool(dbConfig);
@@ -73,13 +72,13 @@ const getUser = async (req, res) => {
       .query('SELECT * FROM Users WHERE UserId = @userId');
 
     if (!result.recordset || result.recordset.length === 0) {
-      return res.status(204).json({ message: `User ID ${userId} not found` });
+      return res.status(400).json({ message: `User ID ${userId} not found` });
     }
 
-    res.json(result.recordset[0]);
+    res.status(200).json(result.recordset[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal Server Error' });
   } finally {
     sql.close();
   }
@@ -122,11 +121,11 @@ const updateUser = async (req, res) => {
 
     // Only send a response if the user was updated, not for the new user case
     if (!isNewUser) {
-      return res.json({ message: `User ID ${id} updated successfully` });
+      return res.status(200).json({ message: `User ID ${id} updated successfully` });
     }
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: 'Internal Server Error' });
   } finally {
     sql.close();
   }
@@ -138,26 +137,26 @@ const deactivateUser = async (req, res) => {
   const { isActive, id } = req.body;
 
   if (!id || isActive === undefined) {
-    return res.status(400).json({ message: 'User ID and isActive are required' });
+    return res.status(400).json({ message: 'User ID et isActive sont obligatoires' });
   }
 
   try {
     const pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
-    console.log(isActive)
+
     const result = await pool.request()
       .input('userId', sql.Int, id)
       .input('isActive', sql.Bit, isActive)
       .query('UPDATE Users SET active = @isActive WHERE UserId = @userId');
 
     if (result.rowsAffected[0] === 0) {
-      return res.status(204).json({ message: `User ID ${id} not found` });
+      return res.status(400).json({ message: `User ID ${id} not found` });
     }
 
-    res.json({ message: `User ID ${id} deactivated successfully` });
+    res.status(200).json({ message: `User ID ${id} deactivated successfully` });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal Server Error' });
   } finally {
     sql.close();
   }

@@ -2,11 +2,11 @@ const jwt = require('jsonwebtoken');
 const ROLES_LIST = require('../config/roles_list');
 
 const verifyJWT = (req, res, next) => {
-    const authHeader = req.headers.authorization || req.headers.Authorization;
-    if (!authHeader?.startsWith('Bearer ')) return res.sendStatus(401);
 
-    const token = authHeader.split(' ')[1];
-    console.log(token);
+    const token = req.cookies.jwt;
+    if (!token) {
+        return res.status(401).json({ type: 'UNAUTHORIZED', error: `Merci de se connecter pour continuer` });
+    }
 
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) return res.sendStatus(403); // Invalid token
@@ -18,7 +18,10 @@ const verifyJWT = (req, res, next) => {
         if (req.role === ROLES_LIST.Admin) {
             next();
         } else {
-            res.sendStatus(403);
+            res.status(400).json({
+                success: false,
+                message: "Tu n'es pas autorisé"
+            });
         }
     });
 };
