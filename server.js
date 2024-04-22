@@ -3,6 +3,10 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const path = require('path');
+const sql = require('mssql');
+const dbConfig = require('./config/dbConn');
+const { hashPassword } = require('./utils/hashPassword');
+
 const cors = require('cors');
 const corsOptions = require('./config/corsOptions');
 const { logger } = require('./middleware/logEvents');
@@ -49,6 +53,54 @@ app.use('/clients', require('./routes/clients'));
 
 app.use(verifyJWT);
 
+// Middleware to create default admin user if no users exist
+const createDefaultAdminUser = async () => {
+    let pool;
+    try {
+        pool = new sql.ConnectionPool(dbConfig);
+        await pool.connect();
+
+        // Check if there are any users in the database
+        const result = await pool.query`SELECT * FROM [dbo].[Users] Where roles = 5150`;
+        const userCount = result.recordset.length;
+
+        if (userCount === 0) {
+            const password = await hashPassword('999999*+');
+            const defaultAdminUser = {
+                username: '999999',
+                password: password,
+                roles: 5150,
+                active: 1
+            }
+
+            try {
+                await pool.request()
+                    .input('username', sql.NVarChar(255), defaultAdminUser.username)
+                    .input('password', sql.VarChar(255), defaultAdminUser.password)
+                    .input('roles', sql.Int, defaultAdminUser.roles)
+                    .query(`INSERT INTO dbo.Users(
+                        [matricule], [firstName], [lastName], [password], [roleId] 
+                    ) VALUES (
+                        @matricule, @firstName, @lastName, @password, @roleId 
+                    )`);
+                console.log('Default admin user created');
+            } catch (error) {
+                console.error("Erreur d'initialisation Administrateur", error);
+                // res.status(500).json({ message: 'Internal server error' });
+            }
+        }
+        // next();
+    } catch (error) {
+        console.error('SQL error:', error);
+        // res.status(500).json({ message: 'Internal server error' });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+};
+
+createDefaultAdminUser();
 
 app.all('*', (req, res) => {
     res.status(404);

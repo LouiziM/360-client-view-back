@@ -10,13 +10,13 @@ const getClients = async (req, res) => {
     const result = await pool.request().query('SELECT * FROM A_CUSTOMER');
 
     if (!result.recordset || result.recordset.length === 0) {
-      return res.status(204).json({ message: 'No clients found' });
+      return res.status(400).json({ success: false, message: 'No clients found' });
     }
 
     res.json(result.recordset);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   } finally {
     sql.close();
   }
@@ -55,7 +55,6 @@ const getCompletion = async (req, res) => {
       const missing_geographic_fields = findMissingFields(resultClient, geographic_fields);
 
       return res.status(200).json({
-       
         'Situation démographique': {
           'Completion Ratio': demographic_ratio,
           'Missing Fields': missing_demographic_fields

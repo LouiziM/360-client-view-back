@@ -6,7 +6,7 @@ const handleNewUser = async (req, res) => {
   const { user, username, pwd, roles } = req.body;
   const actualUser = user || username;
 
-  if (!actualUser || !pwd) return res.status(400).json({ message: 'Username and password are required.' });
+  if (!actualUser || !pwd) return res.status(400).json({ success: false, message: 'Username and password are required.' });
 
   try { 
     // Connect to SQL Server
@@ -19,7 +19,7 @@ const handleNewUser = async (req, res) => {
       .query('SELECT * FROM Users WHERE username = @username');
 
     if (resultDuplicate.recordset && resultDuplicate.recordset.length > 0) {
-      return res.sendStatus(409); // Conflict
+      return res.status(400).json({ success: false, message: "L'utilisateur est déjà créé."}); // Conflict
     }
 
     // Encrypt the password
@@ -35,10 +35,10 @@ const handleNewUser = async (req, res) => {
 
     console.log("result",resultCreateUser);
 
-    res.status(201).json({ success: `New user ${actualUser} created!` });
+    res.status(200).json({ success: true, message: `New user ${actualUser} created!` });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   } finally {
     
     sql.close();

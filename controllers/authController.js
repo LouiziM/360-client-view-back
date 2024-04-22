@@ -8,7 +8,7 @@ const handleLogin = async (req, res) => {
   const { user, pwd } = req.body;
 
   if (!user || !pwd) {
-    return res.status(400).json({ 'message': 'Username and password are required.' });
+    return res.status(400).json({ message: "L'utilisateur et le mot de passe sont obligatoires." });
   }
 
   try {
@@ -32,19 +32,9 @@ const handleLogin = async (req, res) => {
         { expiresIn: '500s' }
       );
 
-      const newRefreshToken = jwt.sign(
-        { "UserId": foundUser.UserId },
-        process.env.REFRESH_TOKEN_SECRET,
-        { expiresIn: '604800s' }
-      );
-      let refreshTokenArray = [];
-
-      if (foundUser.refreshToken) {
-        if (Array.isArray(foundUser.refreshToken)) {
-          refreshTokenArray = foundUser.refreshToken.filter(rt => rt !== cookies?.jwt);
-        } else {
-          refreshTokenArray.push(foundUser.refreshToken !== cookies?.jwt ? foundUser.refreshToken : null);
-        }
+      const options = {
+        expires: new Date(Date.now() + parseInt(process.env.JWT_EXPIRES) * 60 * 60 * 1000)
+        // expires: new Date(Date.now() + 10000) 
       }
 
       if (cookies?.jwt) {
@@ -74,11 +64,11 @@ const handleLogin = async (req, res) => {
       res.json({ accessToken });
 
     } else {
-      res.sendStatus(401); // Unauthorized
+      return res.status(400).json({ success: false, message: "Nom d'utilisateur ou mot de passe incorrect." });
     }
   } catch (err) {
     console.error(err);
-    res.status(500).send('Internal Server Error');
+    return res.status(500).json({ success: false, message: 'Erreur interne du serveur' });
   } finally {
     sql.close();
   }
