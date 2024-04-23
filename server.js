@@ -78,10 +78,11 @@ const createDefaultAdminUser = async () => {
                     .input('username', sql.NVarChar(255), defaultAdminUser.username)
                     .input('password', sql.VarChar(255), defaultAdminUser.password)
                     .input('roles', sql.Int, defaultAdminUser.roles)
+                    .input('active', sql.Bit, defaultAdminUser.active)
                     .query(`INSERT INTO dbo.Users(
-                        [matricule], [firstName], [lastName], [password], [roleId] 
+                        [username], [password], [roles], [active]
                     ) VALUES (
-                        @matricule, @firstName, @lastName, @password, @roleId 
+                        @username, @password, @roles, @active
                     )`);
                 console.log('Default admin user created');
             } catch (error) {
