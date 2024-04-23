@@ -2,14 +2,11 @@ const jwt = require('jsonwebtoken');
 const ROLES_LIST = require('../config/roles_list');
 
 const verifyJWT = (req, res, next) => {
-    const authHeader = req.headers.authorization || req.headers.Authorization;
-    if (!authHeader?.startsWith('Bearer ')) return res.sendStatus(401);
 
-    const token = authHeader.split(' ')[1];
-    console.log(token);
+    const token = req.cookies.jwt;
 
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-        if (err) return res.sendStatus(403); // Invalid token
+        if (err) return res.status(401).json({ type: 'UNAUTHORIZED', error: 'Ta session est expirée.' });
 
         req.UserId = decoded.UserInfo.UserId;
         req.role = decoded.UserInfo.roles;
@@ -18,7 +15,7 @@ const verifyJWT = (req, res, next) => {
         if (req.role === ROLES_LIST.Admin) {
             next();
         } else {
-            res.sendStatus(403);
+            res.status(403).json({ type: 'UNAUTHORIZED', error: "Vous n'avez pas le droit à accéder à cette ressource." });
         }
     });
 };
