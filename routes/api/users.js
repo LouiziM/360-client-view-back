@@ -8,8 +8,8 @@ router.route('/')
     .get(verifyJWT, usersController.getAllUsers)
     .delete(verifyJWT, usersController.deleteUser)
     .put(verifyJWT, usersController.updateUser);
-router.route('/one')
-    .get(verifyJWT,usersController.getUser);
+// router.route('/one')
+//     .get(verifyJWT,usersController.getUser);
 router.route('/deactivate')
     .put( verifyJWT,usersController.deactivateUser);
 router.route('/roles')

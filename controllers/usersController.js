@@ -10,13 +10,14 @@ const getAllUsers = async (req, res) => {
     const pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
-    const result = await pool.request().query('SELECT * FROM Users');
+    const result = await pool
+      .request()
+      .query('SELECT * FROM Users WHERE roles != 1'); 
 
     if (!result.recordset || result.recordset.length === 0) {
       return res.status(400).json({ success: false, message: 'No users found' });
     }
 
-   
     const users = result.recordset.map(user => ({
       ...user,
       password: '' 
@@ -30,6 +31,7 @@ const getAllUsers = async (req, res) => {
     sql.close();
   }
 };
+
 
 // Delete user from the Users table
 const deleteUser = async (req, res) => {
