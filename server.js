@@ -14,11 +14,7 @@ const errorHandler = require('./middleware/errorHandler');
 const verifyJWT = require('./middleware/verifyJWT');
 const cookieParser = require('cookie-parser');
 const credentials = require('./middleware/credentials');
-
-const connectDB = require('./config/dbConn');
 const PORT = process.env.PORT || 4004;
-const usersController = require('./controllers/usersController');
-
 
 // custom middleware logger
 app.use(logger);
@@ -46,7 +42,6 @@ app.use('/', express.static(path.join(__dirname, '/public')));
 app.use('/', require('./routes/root'));
 app.use('/register', require('./routes/register'));
 app.use('/auth', require('./routes/auth'));
-app.use('/refresh', require('./routes/refresh'));
 app.use('/logout', require('./routes/logout'));
 app.use('/users', require('./routes/api/users'));
 app.use('/clients', require('./routes/clients'));
@@ -61,7 +56,7 @@ const createDefaultAdminUser = async () => {
         await pool.connect();
 
         // Check if there are any users in the database
-        const result = await pool.query`SELECT * FROM [dbo].[Users] Where roles = 5150`;
+        const result = await pool.query`SELECT * FROM [dbo].[Users] Where roles = 1`;
         const userCount = result.recordset.length;
 
         if (userCount === 0) {
@@ -69,13 +64,13 @@ const createDefaultAdminUser = async () => {
             const defaultAdminUser = {
                 username: '999999',
                 password: password,
-                roles: 5150,
+                roles: 1,
                 active: 1
             }
 
             try {
                 await pool.request()
-                    .input('username', sql.NVarChar(255), defaultAdminUser.username)
+                    .input('username',  sql.VarChar(255), defaultAdminUser.username)
                     .input('password', sql.VarChar(255), defaultAdminUser.password)
                     .input('roles', sql.Int, defaultAdminUser.roles)
                     .input('active', sql.Bit, defaultAdminUser.active)

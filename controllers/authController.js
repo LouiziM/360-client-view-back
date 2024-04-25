@@ -14,7 +14,7 @@ const handleLogin = async (req, res) => {
     const pool = await sql.connect(dbConfig);
 
     const result = await pool.request()
-      .input('username', sql.NVarChar(255), user)
+      .input('username',  sql.VarChar(255), user)
       .query('SELECT * FROM [dbo].[Users] WHERE [username] = @username AND [active] = 1');
 
     const foundUser = result.recordset[0];
@@ -27,9 +27,11 @@ const handleLogin = async (req, res) => {
 
       const options = {
         expires: new Date(Date.now() + parseInt(process.env.JWT_EXPIRES) * 60 * 60 * 1000)
-        // expires: new Date(Date.now() + 10000) 
       }
-
+      await pool.request()
+      
+        .input('username',  sql.VarChar(255),user) 
+        .query('UPDATE Users SET  lastLogin = GETDATE() WHERE username = @username');
       const accessToken = jwt.sign({ "UserInfo": { "UserId": foundUser.UserId, "roles": role } }, process.env.ACCESS_TOKEN_SECRET);
       return res.status(200).cookie('jwt', accessToken, options).json({ accessToken });
     } else {

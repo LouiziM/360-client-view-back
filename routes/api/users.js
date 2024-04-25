@@ -12,5 +12,7 @@ router.route('/one')
     .get(verifyJWT,usersController.getUser);
 router.route('/deactivate')
     .put( verifyJWT,usersController.deactivateUser);
+router.route('/roles')
+    .get(verifyJWT,usersController.getRoles);
 
 module.exports = router;

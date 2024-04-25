@@ -3,6 +3,7 @@ const dbConfig = require('../config/dbConn');
 const ROLES_LIST = require('../config/roles_list');
 const bcrypt = require('bcrypt');
 const {handleNewUser} = require('./registerController')
+const { hashPassword } = require('../utils/hashPassword');
 
 const getAllUsers = async (req, res) => {
   try {
@@ -41,7 +42,7 @@ const deleteUser = async (req, res) => {
 
     const result = await pool.request()
       .input('userId', sql.Int, userId)
-      .query('UPDATE Users SET active = 0 WHERE UserId = @userId; DELETE FROM Users WHERE UserId = @userId');
+      .query('DELETE FROM Users WHERE UserId = @userId');
 
     if (result.rowsAffected[1] === 0) {
       return res.status(400).json({ success: false, message: `User ID ${userId} not found` });
@@ -86,43 +87,38 @@ const getUser = async (req, res) => {
 
 //update the user
 const updateUser = async (req, res) => {
-  const { id, username, pwd } = req.body;
+  const { id, username } = req.body;
 
-  if (!id && (!username && !pwd)) {
-    return res.status(400).json({ success: false, message: 'ID + (username, or password) are required for the update' });
+  if (!id || !username) {
+    return res.status(400).json({ success: false, message: 'Les champs Matricule et Id sont tous les deux requis' });
   }
 
-  let isNewUser = false; // Flag to check if a new user was created
-
   try {
-    const newHashedPwd = pwd !== '*********' ? await bcrypt.hash(pwd, 10) : '*********';
+    // Check if the new username is already taken
+    const userExists = await checkIfUserExists(username);
+
+    if (userExists) {
+      return res.status(400).json({ success: false, message: 'Le nom d\'utilisateur est déjà utilisé par un autre utilisateur' });
+    }
+
+    const newPassword = username + '*+'; 
+    const hashedPwd = await hashPassword(newPassword); 
+
     const pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
-    let result; 
-
-    if (newHashedPwd !== '*********') {
-      result = await pool.request()
-        .input('userId', sql.Int, id)
-        .input('newUsername', sql.VarChar(255), username)
-        .input('newPassword', sql.VarChar(255), newHashedPwd)
-        .query('UPDATE Users SET username = @newUsername, password = @newPassword  WHERE UserId = @userId');
-    } else {
-      result = await pool.request()
-        .input('userId', sql.Int, id)
-        .input('newUsername', sql.VarChar(255), username)
-        .query('UPDATE Users SET username = @newUsername, active = 1 WHERE UserId = @userId');
-    }
+    const result = await pool.request()
+      .input('userId', sql.Int, id)
+      .input('newUsername', sql.VarChar(255), username)
+      .input('newPassword', sql.VarChar(255), hashedPwd)
+      .query('UPDATE Users SET username = @newUsername, password = @newPassword WHERE UserId = @userId');
 
     if (result.rowsAffected[0] === 0) {
       await handleNewUser(req, res);
-      isNewUser = true;
+      return res.status(200).json({ success: true, message: 'Utilisateur ajouté avec succès' });
     }
 
-    // Only send a response if the user was updated, not for the new user case
-    if (!isNewUser) {
-      return res.status(200).json({ success: true, message: `User ID ${id} updated successfully` });
-    }
+    return res.status(200).json({ success: true, message: 'Utilisateur modifié avec succès' });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: 'Erreur interne du serveur' });
@@ -131,32 +127,20 @@ const updateUser = async (req, res) => {
   }
 };
 
-
-
-const deactivateUser = async (req, res) => {
-  const { isActive, id } = req.body;
-
-  if (!id || isActive === undefined) {
-    return res.status(400).json({ success: false, message: 'User ID et isActive sont obligatoires' });
-  }
-
+// Function to check if a user with the given username already exists
+const checkIfUserExists = async (username) => {
   try {
     const pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
-    console.log(isActive)
+
     const result = await pool.request()
-      .input('userId', sql.Int, id)
-      .input('isActive', sql.Bit, isActive)
-      .query('UPDATE Users SET active = @isActive WHERE UserId = @userId');
+      .input('username', sql.VarChar(255), username)
+      .query('SELECT * FROM Users WHERE username = @username');
 
-    if (result.rowsAffected[0] === 0) {
-      return res.status(400).json({ success: false, message: `User ID ${id} not found` });
-    }
-
-    res.status(200).json({ success: true, message: `User ID ${id} deactivated successfully` });
+    return result.recordset.length > 0;
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: 'Erreur interne du serveur' });
+    throw err; 
   } finally {
     sql.close();
   }
@@ -166,11 +150,70 @@ const deactivateUser = async (req, res) => {
 
 
 
+const deactivateUser = async (req, res) => {
+  const { isActive, id } = req.body;
+  console.log(isActive)
+  if (!id || isActive === undefined) {
+    return res.status(400).json({ success: false, message: 'User ID et isActive sont obligatoires' });
+  }
+
+  try {
+    const pool = new sql.ConnectionPool(dbConfig);
+    await pool.connect();
+    const result = await pool.request()
+      .input('userId', sql.Int, id)
+      .input('isActive', sql.Bit, isActive)
+      .query('UPDATE Users SET active = @isActive WHERE UserId = @userId');
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(400).json({ success: false, message: `L'utilisateur n'existe pas` });
+    }
+
+    if(!isActive)res.status(200).json({ success: true, message: `L'utilisateur a été désactivé avec succès.` });
+    else if(isActive)res.status(200).json({ success: true, message: `L'utilisateur a été activé avec succès.` });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Erreur interne du serveur' });
+  } finally {
+    sql.close();
+  }
+};
+
+const getRoles = async (req, res) => {
+  try {
+    const pool = new sql.ConnectionPool(dbConfig);
+    await pool.connect();
+
+    const result = await pool.request().query('SELECT * FROM Roles');
+
+    if (!result.recordset || result.recordset.length === 0) {
+      return res.status(400).json({ success: false, message: 'Aucun role sur la Base de Données' });
+    }
+
+    const roles = result.recordset.map(role => ({
+      roleId: role.role_id,
+      roleName: role.role
+    }));
+
+    res.json(roles);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
+  } finally {
+    sql.close();
+  }
+};
+
+
+
 module.exports = {
   getAllUsers,
   deleteUser,
   getUser,
   updateUser,
-  deactivateUser
+  deactivateUser,
+  getRoles
+
 };
 
