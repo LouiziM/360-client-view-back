@@ -5,7 +5,7 @@ const ROLES_LIST = require('../../config/roles_list');
 const verifyJWT = require('../../middleware/verifyJWT')
 
 router.route('/')
-    .get(verifyJWT, usersController.getAllUsers)
+    .get(usersController.getAllUsers)
     .delete(verifyJWT, usersController.deleteUser)
     .put(verifyJWT, usersController.updateUser);
 // router.route('/one')

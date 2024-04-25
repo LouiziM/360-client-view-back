@@ -12,7 +12,12 @@ const getAllUsers = async (req, res) => {
 
     const result = await pool
       .request()
-      .query('SELECT * FROM Users WHERE roles != 1'); 
+      .query(`
+        SELECT U.*, R.role
+        FROM Users U
+        JOIN Roles R ON U.roles = R.role_id
+        WHERE R.role != 'Administrateur'
+      `); 
 
     if (!result.recordset || result.recordset.length === 0) {
       return res.status(400).json({ success: false, message: 'No users found' });
@@ -31,6 +36,7 @@ const getAllUsers = async (req, res) => {
     sql.close();
   }
 };
+
 
 
 // Delete user from the Users table
@@ -87,37 +93,49 @@ const getUser = async (req, res) => {
   }
 };
 
-//update the user
+
+// Update the user
 const updateUser = async (req, res) => {
-  const { id, username } = req.body;
+  const { id, username, roles } = req.body;
 
   if (!id || !username) {
     return res.status(400).json({ success: false, message: 'Les champs Matricule et Id sont tous les deux requis' });
   }
 
   try {
-    // Check if the new username is already taken
-    const userExists = await checkIfUserExists(username);
-
-    if (userExists) {
-      return res.status(400).json({ success: false, message: 'Le nom d\'utilisateur est déjà utilisé par un autre utilisateur' });
-    }
-
-    const newPassword = username + '*+'; 
-    const hashedPwd = await hashPassword(newPassword); 
-
+    // Check if the provided username corresponds to the UserId
     const pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
     const result = await pool.request()
       .input('userId', sql.Int, id)
-      .input('newUsername', sql.VarChar(255), username)
-      .input('newPassword', sql.VarChar(255), hashedPwd)
-      .query('UPDATE Users SET username = @newUsername, password = @newPassword WHERE UserId = @userId');
+      .input('username', sql.VarChar(6), username)
+      .query('SELECT * FROM Users WHERE UserId = @userId AND username = @username');
 
-    if (result.rowsAffected[0] === 0) {
-      await handleNewUser(req, res);
-      return res.status(200).json({ success: true, message: 'Utilisateur ajouté avec succès' });
+    if (!result.recordset || result.recordset.length === 0) {
+      // The provided username does not correspond to the UserId, check if it already exists
+      const userExists = await checkIfUserExists(username);
+
+      if (userExists) {
+        return res.status(400).json({ success: false, message: 'Le nom d\'utilisateur est déjà utilisé par un autre utilisateur' });
+      }
+
+      if (roles !== 1 && roles !== 2) {
+        return res.status(400).json({ success: false, message: 'Les rôles doivent être soit 1 soit 2' });
+      }
+
+      // Update username and roles
+      await pool.request()
+        .input('userId', sql.Int, id)
+        .input('newUsername', sql.VarChar(6), username)
+        .input('newRoles', sql.Int, roles)
+        .query('UPDATE Users SET username = @newUsername, roles = @newRoles WHERE UserId = @userId');
+    } else {
+      // The provided username corresponds to the UserId, update only roles
+      await pool.request()
+        .input('userId', sql.Int, id)
+        .input('newRoles', sql.Int, roles)
+        .query('UPDATE Users SET roles = @newRoles WHERE UserId = @userId');
     }
 
     return res.status(200).json({ success: true, message: 'Utilisateur modifié avec succès' });
@@ -129,6 +147,7 @@ const updateUser = async (req, res) => {
   }
 };
 
+
 // Function to check if a user with the given username already exists
 const checkIfUserExists = async (username) => {
   try {
@@ -136,7 +155,7 @@ const checkIfUserExists = async (username) => {
     await pool.connect();
 
     const result = await pool.request()
-      .input('username', sql.VarChar(255), username)
+      .input('username', sql.VarChar(6), username)
       .query('SELECT * FROM Users WHERE username = @username');
 
     return result.recordset.length > 0;
