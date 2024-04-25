@@ -206,7 +206,7 @@ const getRoles = async (req, res) => {
     const pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
-    const result = await pool.request().query('SELECT * FROM Roles');
+    const result = await pool.request().query('SELECT * FROM Roles WHERE role_id != 1');
 
     if (!result.recordset || result.recordset.length === 0) {
       return res.status(400).json({ success: false, message: 'Aucun role sur la Base de Données' });
