@@ -1,13 +1,14 @@
 const sql = require('mssql');
-const dbConfig = require('../config/dbConn'); 
+const dbConfig = require('../config/dbConn');
 const ROLES_LIST = require('../config/roles_list');
 const bcrypt = require('bcrypt');
-const {handleNewUser} = require('./registerController')
+const { handleNewUser } = require('./registerController')
 const { hashPassword } = require('../utils/hashPassword');
 
 const getAllUsers = async (req, res) => {
+  let pool;
   try {
-    const pool = new sql.ConnectionPool(dbConfig);
+    pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
     const result = await pool
@@ -17,7 +18,7 @@ const getAllUsers = async (req, res) => {
         FROM Users U
         JOIN Roles R ON U.roles = R.role_id
         WHERE R.role != 'Administrateur'
-      `); 
+      `);
 
     if (!result.recordset || result.recordset.length === 0) {
       return res.status(400).json({ success: false, message: 'No users found' });
@@ -25,7 +26,7 @@ const getAllUsers = async (req, res) => {
 
     const users = result.recordset.map(user => ({
       ...user,
-      password: '' 
+      password: ''
     }));
 
     res.json(users);
@@ -33,7 +34,9 @@ const getAllUsers = async (req, res) => {
     console.error(err);
     res.status(500).json({ success: false, message: 'Erreur interne du serveur' });
   } finally {
-    sql.close();
+    if (pool) {
+      await pool.close();
+    }
   }
 };
 
@@ -42,10 +45,12 @@ const getAllUsers = async (req, res) => {
 // Delete user from the Users table
 const deleteUser = async (req, res) => {
   const userId = req?.body?.id;
+  let pool;
+
   if (!userId) return res.status(400).json({ success: false, message: 'User ID required' });
 
   try {
-    const pool = new sql.ConnectionPool(dbConfig);
+    pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
     const result = await pool.request()
@@ -61,21 +66,24 @@ const deleteUser = async (req, res) => {
     console.error(err);
     res.status(500).json({ success: false, message: 'Erreur interne du serveur' });
   } finally {
-    sql.close();
+    if (pool) {
+      await pool.close();
+    }
   }
 };
 
 
 // Fetch a single user from the Users table
 const getUser = async (req, res) => {
-  const userId = req?.body?.id; 
+  const userId = req?.body?.id;
+  let pool;
 
   if (!userId) return res.status(400).json({ success: false, message: 'User ID est obligatoire' });
 
   try {
-    const pool = new sql.ConnectionPool(dbConfig);
+    pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
-   
+
     const result = await pool.request()
       .input('userId', sql.Int, userId)
       .query('SELECT * FROM Users WHERE UserId = @userId');
@@ -89,7 +97,9 @@ const getUser = async (req, res) => {
     console.error(err);
     res.status(500).json({ success: false, message: 'Erreur interne du serveur' });
   } finally {
-    sql.close();
+    if (pool) {
+      await pool.close();
+    }
   }
 };
 
@@ -97,6 +107,7 @@ const getUser = async (req, res) => {
 // Update the user
 const updateUser = async (req, res) => {
   const { id, username, roles } = req.body;
+  let pool;
 
   if (!id || !username) {
     return res.status(400).json({ success: false, message: 'Les champs Matricule et Id sont tous les deux requis' });
@@ -104,7 +115,7 @@ const updateUser = async (req, res) => {
 
   try {
     // Check if the provided username corresponds to the UserId
-    const pool = new sql.ConnectionPool(dbConfig);
+    pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
     const result = await pool.request()
@@ -143,15 +154,19 @@ const updateUser = async (req, res) => {
     console.error(err);
     return res.status(500).json({ success: false, message: 'Erreur interne du serveur' });
   } finally {
-    sql.close();
+    if (pool) {
+      await pool.close();
+    }
   }
 };
 
 
 // Function to check if a user with the given username already exists
 const checkIfUserExists = async (username) => {
+  let pool;
+
   try {
-    const pool = new sql.ConnectionPool(dbConfig);
+    pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
     const result = await pool.request()
@@ -161,9 +176,11 @@ const checkIfUserExists = async (username) => {
     return result.recordset.length > 0;
   } catch (err) {
     console.error(err);
-    throw err; 
+    throw err;
   } finally {
-    sql.close();
+    if (pool) {
+      await pool.close();
+    }
   }
 };
 
@@ -173,13 +190,14 @@ const checkIfUserExists = async (username) => {
 
 const deactivateUser = async (req, res) => {
   const { isActive, id } = req.body;
-  console.log(isActive)
+  let pool;
+
   if (!id || isActive === undefined) {
     return res.status(400).json({ success: false, message: 'User ID et isActive sont obligatoires' });
   }
 
   try {
-    const pool = new sql.ConnectionPool(dbConfig);
+    pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
     const result = await pool.request()
       .input('userId', sql.Int, id)
@@ -190,20 +208,24 @@ const deactivateUser = async (req, res) => {
       return res.status(400).json({ success: false, message: `L'utilisateur n'existe pas` });
     }
 
-    if(!isActive)res.status(200).json({ success: true, message: `L'utilisateur a été désactivé avec succès.` });
-    else if(isActive)res.status(200).json({ success: true, message: `L'utilisateur a été activé avec succès.` });
+    if (!isActive) res.status(200).json({ success: true, message: `L'utilisateur a été désactivé avec succès.` });
+    else if (isActive) res.status(200).json({ success: true, message: `L'utilisateur a été activé avec succès.` });
 
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Erreur interne du serveur' });
   } finally {
-    sql.close();
+    if (pool) {
+      await pool.close();
+    }
   }
 };
 
 const getRoles = async (req, res) => {
+  let pool;
+
   try {
-    const pool = new sql.ConnectionPool(dbConfig);
+    pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
     const result = await pool.request().query('SELECT * FROM Roles WHERE role_id != 1');
@@ -222,7 +244,9 @@ const getRoles = async (req, res) => {
     console.error(err);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   } finally {
-    sql.close();
+    if (pool) {
+      await pool.close();
+    }
   }
 };
 
@@ -235,6 +259,5 @@ module.exports = {
   updateUser,
   deactivateUser,
   getRoles
-
 };
 

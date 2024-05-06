@@ -6,10 +6,10 @@ const handleLogout = async (req, res) => {
   if (!cookies?.jwt) return res.sendStatus(204); // No cookie, no session
 
   const refreshToken = cookies.jwt;
-
+  let pool;
   try {
     // Connect to SQL Server
-    const pool = new sql.ConnectionPool(dbConfig);
+    pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
 
     // Check if refreshToken is in the database
@@ -36,7 +36,9 @@ const handleLogout = async (req, res) => {
     console.error(err);
     res.status(500).send('Internal Server Error');
   } finally {
-    sql.close();
+    if (pool) {
+      await pool.close();
+    }
   }
 };
 
