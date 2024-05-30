@@ -8,5 +8,6 @@ router.get('/completion/:id',forceLogout, clientsController.getCompletion);
 router.get('/customer-count-by-region',forceLogout, clientsController.getCountByRegion);
 router.get('/parc-client/:numClient', forceLogout, clientsController.getParcClient);
 router.get('/passage-sav/:numClient', forceLogout, clientsController.getPassageSAV);
+router.get('/satisfaction/:numClient', forceLogout, clientsController.getSatisfaction);
 
 module.exports = router;
