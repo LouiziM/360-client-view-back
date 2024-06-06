@@ -3,8 +3,6 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const path = require('path');
-const sql = require('mssql');
-const dbConfig = require('./config/dbConn');
 const { hashPassword } = require('./utils/hashPassword');
 
 const cors = require('cors');
@@ -15,6 +13,7 @@ const verifyJWT = require('./middleware/verifyJWT');
 const cookieParser = require('cookie-parser');
 const credentials = require('./middleware/credentials');
 const PORT = process.env.PORT || 4004;
+const { sql, poolPromise } = require('./utils/poolPromise');
 
 // custom middleware logger
 app.use(logger);
@@ -50,13 +49,11 @@ app.use(verifyJWT);
 
 // Middleware to create default admin user if no users exist
 const createDefaultAdminUser = async () => {
-    let pool;
     try {
-        pool = new sql.ConnectionPool(dbConfig);
-        await pool.connect();
+        const pool = await poolPromise;
 
         // Check if there are any users in the database
-        const result = await pool.query`SELECT * FROM [dbo].[Users] Where roles = 1`;
+        const result = await pool.request().query`SELECT * FROM [dbo].[Users] WHERE roles = 1`;
         const userCount = result.recordset.length;
 
         if (userCount === 0) {
@@ -66,15 +63,15 @@ const createDefaultAdminUser = async () => {
                 password: password,
                 roles: 1,
                 active: 1
-            }
+            };
 
             try {
                 await pool.request()
-                    .input('username',  sql.VarChar(255), defaultAdminUser.username)
+                    .input('username', sql.VarChar(255), defaultAdminUser.username)
                     .input('password', sql.VarChar(255), defaultAdminUser.password)
                     .input('roles', sql.Int, defaultAdminUser.roles)
                     .input('active', sql.Bit, defaultAdminUser.active)
-                    .query(`INSERT INTO dbo.Users(
+                    .query(`INSERT INTO dbo.Users (
                         [username], [password], [roles], [active]
                     ) VALUES (
                         @username, @password, @roles, @active
@@ -82,17 +79,10 @@ const createDefaultAdminUser = async () => {
                 console.log('Default admin user created');
             } catch (error) {
                 console.error("Erreur d'initialisation Administrateur", error);
-                // res.status(500).json({ message: 'Internal server error' });
             }
         }
-        // next();
     } catch (error) {
         console.error('SQL error:', error);
-        // res.status(500).json({ message: 'Internal server error' });
-    } finally {
-        if (pool) {
-            await pool.close();
-        }
     }
 };
 

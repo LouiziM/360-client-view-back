@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
-const sql = require('mssql');
-const dbConfig = require('../config/dbConn');
+const { poolPromise, sql } = require('../utils/poolPromise');
+
 
 const forceLogout = async (req, res, next) => {
     
@@ -12,7 +12,7 @@ const forceLogout = async (req, res, next) => {
         const userId = decoded.UserInfo.UserId; 
 
         try {
-            const pool = await sql.connect(dbConfig);
+            const pool = await poolPromise; 
             const result = await pool.request()
                 .input('userId', sql.Int, userId)
                 .query('SELECT * FROM Users WHERE UserId = @userId');
@@ -25,9 +25,7 @@ const forceLogout = async (req, res, next) => {
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Erreur interne du serveur' });
-        } finally {
-            sql.close();
-        }
+        } 
     });
 };
 

@@ -1,16 +1,15 @@
-const sql = require('mssql');
-const dbConfig = require('../config/dbConn');
+const { poolPromise, sql } = require('../utils/poolPromise');
+
 
 const handleLogout = async (req, res) => {
   const cookies = req.cookies;
   if (!cookies?.jwt) return res.sendStatus(204); // No cookie, no session
 
   const refreshToken = cookies.jwt;
-  let pool;
   try {
     // Connect to SQL Server
-    pool = new sql.ConnectionPool(dbConfig);
-    await pool.connect();
+    const pool = await poolPromise; 
+
 
     // Check if refreshToken is in the database
     const result = await pool.request()
@@ -35,11 +34,7 @@ const handleLogout = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send('Internal Server Error');
-  } finally {
-    if (pool) {
-      await pool.close();
-    }
-  }
+  } 
 };
 
 module.exports = { handleLogout };

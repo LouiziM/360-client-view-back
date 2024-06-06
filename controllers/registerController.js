@@ -1,12 +1,11 @@
-const sql = require('mssql');
 const bcrypt = require('bcrypt');
-const dbConfig = require('../config/dbConn');
 const { hashPassword } = require('../utils/hashPassword');
+const { poolPromise, sql } = require('../utils/poolPromise');
+
 
 const handleNewUser = async (req, res) => {
   const { user, username, roles } = req.body;
   const actualUser = user || username;
-  let pool;
 
   if (!actualUser) {
     return res.status(400).json({ success: false, message: 'Le champ Matricule est nécessaire' });
@@ -15,8 +14,8 @@ const handleNewUser = async (req, res) => {
   }
   try {
     // Connect to SQL Server
-    pool = new sql.ConnectionPool(dbConfig);
-    await pool.connect();
+    const pool = await poolPromise; 
+
 
     // Check for duplicate usernames in the database
     const resultDuplicate = await pool.request()
@@ -43,11 +42,7 @@ const handleNewUser = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: err.message });
-  } finally {
-    if (pool) {
-      await pool.close();
-    }
-  }
+  } 
 };
 
 module.exports = { handleNewUser };

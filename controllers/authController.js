@@ -1,19 +1,17 @@
-const sql = require('mssql');
+const { poolPromise, sql } = require('../utils/poolPromise');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const dbConfig = require('../config/dbConn');
 
 const handleLogin = async (req, res) => {
   const { user, pwd } = req.body;
-  let pool;
 
   if (!user || !pwd) {
     return res.status(400).json({ status: false, message: "L'utilisateur et le mot de passe sont obligatoires." });
   }
 
   try {
-    pool = new sql.ConnectionPool(dbConfig);
-    await pool.connect();
+    const pool = await poolPromise; 
+
 
     const result = await pool.request()
       .input('username', sql.VarChar(255), user)
@@ -51,11 +49,7 @@ const handleLogin = async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: 'Erreur interne du serveur' });
-  } finally {
-    if (pool) {
-      await pool.close();
-    }
-  }
+  } 
 };
 
 
