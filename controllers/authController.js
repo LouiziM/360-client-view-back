@@ -1,7 +1,7 @@
 const sql = require('mssql');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const dbConfig = require('../config/dbConn');
+const {dbConfig} = require('../config/dbConn');
 
 const handleLogin = async (req, res) => {
   const { user, pwd } = req.body;
@@ -16,10 +16,10 @@ const handleLogin = async (req, res) => {
     await pool.connect();
 
     const result = await pool.request()
-      .input('username', sql.VarChar(255), user)
+      .input('username', sql.VarChar(6), user)
       .query('SELECT * FROM [dbo].[Users] WHERE [username] = @username AND [active] = 1');
 
-    const foundUser = result.recordset[0];
+    const foundUser = result?.recordset[0];
     if (!foundUser) return res.status(400).json({ status: false, message: "Cet utilisateur est désactivé." });
 
     // Evaluate password
@@ -34,7 +34,7 @@ const handleLogin = async (req, res) => {
         .input('username', sql.VarChar(255), user)
         .query('UPDATE Users SET  lastLogin = GETDATE() WHERE username = @username');
       const accessToken = jwt.sign({ "UserInfo": { "UserId": foundUser.UserId, "roles": role } }, process.env.ACCESS_TOKEN_SECRET);
-      return res.status(200).cookie('jwt', accessToken, options).json({
+      return res.status(200).cookie('token_cdp', accessToken, options).json({
         accessToken,
         user: {
           UserId: foundUser?.UserId,

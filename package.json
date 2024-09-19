@@ -19,10 +19,10 @@
     "cors": "^2.8.5",
     "date-fns": "^2.23.0",
     "dotenv": "^10.0.0",
-    "express": "^4.17.1",
+    "express": "^4.19.2",
     "jsonwebtoken": "^8.5.1",
     "jwt-decode": "^4.0.0",
-    "mssql": "^10.0.2",
+    "mssql": "^11.0.1",
     "uuid": "^8.3.2"
   },
   "devDependencies": {

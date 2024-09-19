@@ -1,11 +1,11 @@
 const sql = require('mssql');
-const dbConfig = require('../config/dbConn');
+const {dbConfig} = require('../config/dbConn');
 
 const handleLogout = async (req, res) => {
   const cookies = req.cookies;
-  if (!cookies?.jwt) return res.sendStatus(204); // No cookie, no session
+  if (!cookies?.token_cdp) return res.sendStatus(204); // No cookie, no session
 
-  const refreshToken = cookies.jwt;
+  const refreshToken = cookies.token_cdp;
   let pool;
   try {
     // Connect to SQL Server
@@ -19,7 +19,7 @@ const handleLogout = async (req, res) => {
 
     if (!result.recordset || result.recordset.length === 0) {
       // If refreshToken is not found, clear the cookie and return 204
-      res.clearCookie('jwt', { httpOnly: true, sameSite: 'None', secure: true });
+      res.clearCookie('token_cdp', { httpOnly: true, sameSite: 'None', secure: true });
       return res.sendStatus(204);
     }
 
@@ -30,7 +30,7 @@ const handleLogout = async (req, res) => {
       .query('UPDATE Users SET refreshToken = NULL WHERE refreshToken = @refreshToken');
 
     // Clear the cookie and return 204
-    res.clearCookie('jwt', { httpOnly: true, sameSite: 'None', secure: true });
+    res.clearCookie('token_cdp', { httpOnly: true, sameSite: 'None', secure: true });
     res.sendStatus(204);
   } catch (err) {
     console.error(err);

@@ -1,10 +1,10 @@
-//3
 require('dotenv').config();
+
 const express = require('express');
 const app = express();
 const path = require('path');
 const sql = require('mssql');
-const dbConfig = require('./config/dbConn');
+const { dbConfig } = require('./config/dbConn');
 const { hashPassword } = require('./utils/hashPassword');
 
 const cors = require('cors');
@@ -70,7 +70,7 @@ const createDefaultAdminUser = async () => {
 
             try {
                 await pool.request()
-                    .input('username',  sql.VarChar(255), defaultAdminUser.username)
+                    .input('username', sql.VarChar(255), defaultAdminUser.username)
                     .input('password', sql.VarChar(255), defaultAdminUser.password)
                     .input('roles', sql.Int, defaultAdminUser.roles)
                     .input('active', sql.Bit, defaultAdminUser.active)
@@ -110,7 +110,6 @@ app.all('*', (req, res) => {
 });
 
 app.use(errorHandler);
-
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 

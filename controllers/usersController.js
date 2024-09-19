@@ -1,5 +1,5 @@
 const sql = require('mssql');
-const dbConfig = require('../config/dbConn');
+const {dbConfig} = require('../config/dbConn');
 const ROLES_LIST = require('../config/roles_list');
 const bcrypt = require('bcrypt');
 const { handleNewUser } = require('./registerController')
@@ -14,7 +14,7 @@ const getAllUsers = async (req, res) => {
     const result = await pool
       .request()
       .query(`
-        SELECT U.*, R.role
+        SELECT U.UserId AS id, U.*, R.role
         FROM Users U
         JOIN Roles R ON U.roles = R.role_id
         WHERE R.role != 'Administrateur'
@@ -106,10 +106,10 @@ const getUser = async (req, res) => {
 
 // Update the user
 const updateUser = async (req, res) => {
-  const { id, username, roles } = req.body;
+  const { id, matricule, roles } = req.body;
   let pool;
 
-  if (!id || !username) {
+  if (!id || !matricule) {
     return res.status(400).json({ success: false, message: 'Les champs Matricule et Id sont tous les deux requis' });
   }
 
@@ -120,15 +120,15 @@ const updateUser = async (req, res) => {
 
     const result = await pool.request()
       .input('userId', sql.Int, id)
-      .input('username', sql.VarChar(6), username)
+      .input('username', sql.VarChar(6), matricule)
       .query('SELECT * FROM Users WHERE UserId = @userId AND username = @username');
 
-    if (!result.recordset || result.recordset.length === 0) {
+    if (!result?.recordset || result?.recordset?.length === 0) {
       // The provided username does not correspond to the UserId, check if it already exists
-      const userExists = await checkIfUserExists(username);
+      const userExists = await checkIfUserExists(matricule);
 
       if (userExists) {
-        return res.status(400).json({ success: false, message: 'Le nom d\'utilisateur est déjà utilisé par un autre utilisateur' });
+        return res.status(400).json({ success: false, message: 'Ce matricule est déjà utilisé par un autre utilisateur' });
       }
 
       if (roles !== 1 && roles !== 2) {
@@ -138,7 +138,7 @@ const updateUser = async (req, res) => {
       // Update username and roles
       await pool.request()
         .input('userId', sql.Int, id)
-        .input('newUsername', sql.VarChar(6), username)
+        .input('newUsername', sql.VarChar(6), matricule)
         .input('newRoles', sql.Int, roles)
         .query('UPDATE Users SET username = @newUsername, roles = @newRoles WHERE UserId = @userId');
     } else {

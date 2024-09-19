@@ -3,7 +3,7 @@ const ROLES_LIST = require('../config/roles_list');
 
 const verifyJWT = (req, res, next) => {
 
-    const token = req.cookies.jwt;
+    const token = req.cookies.token_cdp;
 
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) return res.status(401).json({ type: 'UNAUTHORIZED', error: 'Ta session est expirée.' });

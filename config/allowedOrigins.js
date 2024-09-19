@@ -1,5 +1,5 @@
 const allowedOrigins = [
-    'http://10.100.6.56:3004'
+    'http://10.100.5.133:3004'
 ];
 
 module.exports = allowedOrigins;
